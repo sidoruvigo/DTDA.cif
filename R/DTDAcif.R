@@ -255,15 +255,15 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
 
     if (ties) {
 
-      r <- list(x = x1, w = ww1)
+      r <- list(method = method, ties = ties, data = x, x = x1, w = ww1, z = z)
 
-    plot(unlist(x1[1])[order(unlist(x1[1]))], cumsum(unlist(ww1[[1]])),
-         type = "s", ylim = c(0, 1), xlim = c(min(x), max(x)))
-
-      for(i in 2:length(unique(z))){
-    lines(unlist(unlist(x1[i]))[order(unlist(unlist(x1[i])))],
-          cumsum(unlist(ww1[[i]])), type = "s", col = i)
-      }
+    # plot(unlist(x1[1])[order(unlist(x1[1]))], cumsum(unlist(ww1[[1]])),
+    #      type = "s", ylim = c(0, 1), xlim = c(min(x), max(x)))
+    #
+    #   for(i in 2:length(unique(z))){
+    # lines(unlist(unlist(x1[i]))[order(unlist(unlist(x1[i])))],
+    #       cumsum(unlist(ww1[[i]])), type = "s", col = i)
+    #   }
 
     } else {
 
@@ -273,15 +273,15 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
       # }
       #
       #
-      # r <- list(x = x1, w = ww1)
+      r <- list(method = method, ties = ties, data = x, x = res1, w = ww1, z = z)
 
-    plot(unlist(res1[[1]]$time), cumsum(unlist(ww1[[1]])), type = "s",
-         ylim = c(0, 1), xlim = c(min(x), max(x)))
-
-      for(i in 2:length(unique(z))){
-        lines(unlist(res1[[i]]$time), cumsum(unlist(ww1[[i]])),
-              type = "s", col = i)
-      }
+    # plot(unlist(res1[[1]]$time), cumsum(unlist(ww1[[1]])), type = "s",
+    #      ylim = c(0, 1), xlim = c(min(x), max(x)))
+    #
+    #   for(i in 2:length(unique(z))){
+    #     lines(unlist(res1[[i]]$time), cumsum(unlist(ww1[[i]])),
+    #           type = "s", col = i)
+    #   }
   }
 
   } else {
@@ -295,65 +295,34 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
       w0[i] <- list(w * ifelse(z == i, 1, 0))
     }
 
-    # w01 <- w * z
-    # w02 <- w * (1 - z)
-
     if(ties) {
-     plot(x[order(x)], cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1), xlim = c(min(x), max(x)))
 
-      for(i in 2:length(unique(z))){
-        lines(x[order(x)], cumsum(unlist(w0[i])),
-              type = "s", col = i)
-      }
+      r <- list(method = method, ties = ties, x = x, w = w0, z = z)
 
+     # plot(x[order(x)], cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1),
+     #      xlim = c(min(x), max(x)))
+     #
+     # for (i in 2:length(unique(z))) {
+     #   lines(x[order(x)], cumsum(unlist(w0[i])),
+     #          type = "s", col = i)
+     #  }
 
      } else {
 
-    plot(res$time, cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1), xlim = c(min(x), max(x)))
-       for(i in 2:length(unique(z))){
-         lines(x[order(x)], cumsum(unlist(w0[i])),
-               type = "s", col = i)
-       }
+       r <- list(method = method, ties = ties, data = x, x = res, w = w0, z = z)
+
+    # plot(res$time, cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1),
+    #      xlim = c(min(x), max(x)))
+    #
+    # for(i in 2:length(unique(z))) {
+    #   lines(x[order(x)], cumsum(unlist(w0[i])),
+    #         type = "s", col = i)
+    #    }
   }
 }
 
-
-  # True cifs:
-
-  # s <- seq(0, max(x), length = 100)
-  # lines(s, r1 * (1 - exp(-r * s)) / r, type = "l", lty = 2)
-  # lines(s, r2 * (1 - exp(-r * s)) / r, type = "l", col = 2, lty = 2)
-
-  # case of ties:
-  # we cannot do as above for the plots since res$biasf is a vector with dim = n
-  # while res$time has dim = length(unique(x))
-  # the following will work (take care! res$biasf corresponds to x[order(x)],
-  # this is important unless x is ordered from the very beginning):
-
-
-
-  # x <- switch(method, indep = ifelse(ties, x[order(x)], res$time),
-  #             dep = ifelse(ties, unlist(x1[1])[order(unlist(x1[1]))], unlist(res1[[1]]$time)))
-  #
-  # w <- switch(method, indep = data.frame(matrix(cumsum(unlist(w0)), byrow=T)),
-  # dep = data.frame(matrix(cumsum(unlist(ww1)), byrow=T)))
-
-
-
-  # if(method == "dep"){
-  # r <- list(x = x1, w = ww1, time = res1)
-  #
-  # } else{
-  #   r <- list(x = x, w = w0, time = res)
-  #
-  # }
-
-
-
-
-
-  # class(r) <- c('list', 'DTDAcif')
-  # r
+  class(r) <- c('list', 'DTDAcif')
+  return(r)
 
 }
 
@@ -362,31 +331,31 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
 # Ejemplo #
 #-------------------------------------------------------------------------------
 
-set.seed(06062018)
-
-n <- 5000
-
-r1 <- 1
-r2 <- 3
-r <- r1 + r2
-x <- rexp(n, rate = r)
-z <- rbinom(n, 2, r1 / r)
-u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
-v <- u + 0.75
-
-for (i in 1:n) {
-  while (u[i] > x[i] | v[i] < x[i]) {
-    x[i] <- rexp(1, rate = r)
-    z[i] <- rbinom(1, 1, r1 / r)
-    u[i] <- 0.75 * rbeta(1, 1 + z, 1) - 0.25     #runif(1,-.25,.5)
-    v[i] <- u[i] + 0.75
-  }
-}
-
-
-# x <- round(x, 1)
-# u <- pmin(round(u, 1), x)
-# v <- pmax(round(v, 1), x)
-
-res <- DTDAcif(x, u, v, comp.event = z, method = "dep")
-# DTDAcif(x, u, v, comp.event = z, method = "indep")
+# set.seed(06062018)
+#
+# n <- 5000
+#
+# r1 <- 1
+# r2 <- 3
+# r <- r1 + r2
+# x <- rexp(n, rate = r)
+# z <- rbinom(n, 2, r1 / r)
+# u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
+# v <- u + 0.75
+#
+# for (i in 1:n) {
+#   while (u[i] > x[i] | v[i] < x[i]) {
+#     x[i] <- rexp(1, rate = r)
+#     z[i] <- rbinom(1, 1, r1 / r)
+#     u[i] <- 0.75 * rbeta(1, 1 + z, 1) - 0.25     #runif(1,-.25,.5)
+#     v[i] <- u[i] + 0.75
+#   }
+# }
+#
+#
+# # x <- round(x, 1)
+# # u <- pmin(round(u, 1), x)
+# # v <- pmax(round(v, 1), x)
+#
+# res <- DTDAcif(x, u, v, comp.event = z, method = "indep")
+# # DTDAcif(x, u, v, comp.event = z, method = "indep")
