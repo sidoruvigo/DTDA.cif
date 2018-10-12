@@ -38,7 +38,7 @@
 #' @export
 DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
                     #,boot = TRUE, B = 300, level = 0.95
- ) {
+) {
 
   cat("Call:", "\n")
   print(match.call())
@@ -55,31 +55,10 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
     stop("Arguments 'x' and 'v' are missing")
   }
 
-  if(missing(method)){
+  if(missing(method) && !missing(comp.event)){
     method <- "dep"
+    cat("'dep' method used by default")
   }
-
-
-  z <- comp.event
-
-
-  if(is.integer(z) & any(z == 0)){
-    z <- z + 1
-  }
-
-  if(is.character(z)) {
-    z <- factor(z)
-    z <- as.integer(z)
-  }
-
-
-  # Order w.r.t. x:
-  u <- u[order(x)]
-  v <- v[order(x)]
-  z <- z[order(x)]
-  x <- x[order(x)]
-
-  ties <- ifelse(length(x) == length(unique(x)), F, T)
 
   `shen` <- function(X, U = NA, V = NA, wt = NA, error = NA, nmaxit = NA) {
 
@@ -228,15 +207,52 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
                           survival0 = round(as.vector(Sob0), 5))))
   }
 
-  res <- shen(x, u, v)
+  if(missing(comp.event)){
 
-  if(method == "dep") {
+    res <- shen(x, u , v)
+    w  <- 1 / res$biasf
+    w <- w / sum(w)
 
-    x1 <- vector("list", length(unique(z)))
-    u1 <- vector("list", length(unique(z)))
-    v1 <- vector("list", length(unique(z)))
+    r <- list(time = res$biasf, cif = w)
+
+    # List names
+    names(r$time) <- "time"
+    names(r$cif) <- "cif"
+
+    if(!missing(method)){
+    warning("'method' is not necessary")
+    }
+
+  } else {
+    z <- comp.event
+
+    if (is.integer(z) & any(z == 0)) {
+      z <- z + 1
+    }
+
+    if (is.character(z)) {
+      z <- factor(z)
+      z <- as.integer(z)
+    }
+  }
+
+  # Order w.r.t. x:
+  u <- u[order(x)]
+  v <- v[order(x)]
+  z <- z[order(x)]
+  x <- x[order(x)]
+
+  # ties <- ifelse(length(x) == length(unique(x)), F, T)
+
+  # res <- shen(x, u, v)
+
+  if(!missing(comp.event) && method == "dep") {
+
+    x1   <- vector("list", length(unique(z)))
+    u1   <- vector("list", length(unique(z)))
+    v1   <- vector("list", length(unique(z)))
     res1 <- vector("list", length(unique(z)))
-    w1 <- vector("list", length(unique(z)))
+    w1   <- vector("list", length(unique(z)))
 
     for (i in  length(unique(z)):1) {
 
@@ -250,42 +266,20 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
     ww1 <- vector("list", length(unique(z)))
 
     for(i in 1:length(unique(z))){
+
       ww1[i] <- list(unlist(w1[i]) / sum(sum(unlist(w1))))
     }
 
-    if (ties) {
 
-      r <- list(method = method, ties = ties, data = x, x = x1, w = ww1, z = z)
+    r <- list(method = method, time = x1, cif = ww1)
 
-    # plot(unlist(x1[1])[order(unlist(x1[1]))], cumsum(unlist(ww1[[1]])),
-    #      type = "s", ylim = c(0, 1), xlim = c(min(x), max(x)))
-    #
-    #   for(i in 2:length(unique(z))){
-    # lines(unlist(unlist(x1[i]))[order(unlist(unlist(x1[i])))],
-    #       cumsum(unlist(ww1[[i]])), type = "s", col = i)
-    #   }
-
-    } else {
-
-      # time <- data.frame(matrix(ncol = length(res1), nrow = length(res1[[1]]$time)))
-      # for(w in 1:length(res1)){
-      #   time[, w] <- res1[[w]]$time
-      # }
-      #
-      #
-      r <- list(method = method, ties = ties, data = x, x = res1, w = ww1, z = z)
-
-    # plot(unlist(res1[[1]]$time), cumsum(unlist(ww1[[1]])), type = "s",
-    #      ylim = c(0, 1), xlim = c(min(x), max(x)))
-    #
-    #   for(i in 2:length(unique(z))){
-    #     lines(unlist(res1[[i]]$time), cumsum(unlist(ww1[[i]])),
-    #           type = "s", col = i)
-    #   }
+    # List names
+    names(r$time) <- paste0("time_", 1:length(x1))
+    names(r$cif) <- paste0("cif_", 1:length(ww1))
   }
 
-  } else {
-
+  if(!missing(comp.event) && method == "indep") {
+    res <- shen(x, u , v)
     w <- 1 / res$biasf
     w <- w / sum(w)   # Weights for independence (biased estimator if (U,V) depends on Z)
 
@@ -295,31 +289,11 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
       w0[i] <- list(w * ifelse(z == i, 1, 0))
     }
 
-    if(ties) {
+    r <- list(method = method, time = x,  cif = w0)
 
-      r <- list(method = method, ties = ties, x = x, w = w0, z = z)
-
-     # plot(x[order(x)], cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1),
-     #      xlim = c(min(x), max(x)))
-     #
-     # for (i in 2:length(unique(z))) {
-     #   lines(x[order(x)], cumsum(unlist(w0[i])),
-     #          type = "s", col = i)
-     #  }
-
-     } else {
-
-       r <- list(method = method, ties = ties, data = x, x = res, w = w0, z = z)
-
-    # plot(res$time, cumsum(unlist(w0[1])), type = "s", ylim = c(0, 1),
-    #      xlim = c(min(x), max(x)))
-    #
-    # for(i in 2:length(unique(z))) {
-    #   lines(x[order(x)], cumsum(unlist(w0[i])),
-    #         type = "s", col = i)
-    #    }
+    # List names
+    names(r$cif) <- paste0("cif_", 1:length(w0))
   }
-}
 
   class(r) <- c('list', 'DTDAcif')
   return(r)
@@ -327,35 +301,38 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
 }
 
 
+
 #-------------------------------------------------------------------------------
 # Ejemplo #
 #-------------------------------------------------------------------------------
 
-# set.seed(06062018)
+# Descomentar para ejecutar
+
+set.seed(06062018)
+
+n <- 5000
+
+r1 <- 1
+r2 <- 3
+r <- r1 + r2
+x <- rexp(n, rate = r)
+z <- rbinom(n, 2, r1 / r)
+u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
+v <- u + 0.75
+
+for (i in 1:n) {
+  while (u[i] > x[i] | v[i] < x[i]) {
+    x[i] <- rexp(1, rate = r)
+    z[i] <- rbinom(1, 1, r1 / r)
+    u[i] <- 0.75 * rbeta(1, 1 + z, 1) - 0.25     #runif(1,-.25,.5)
+    v[i] <- u[i] + 0.75
+  }
+}
+
 #
-# n <- 5000
-#
-# r1 <- 1
-# r2 <- 3
-# r <- r1 + r2
-# x <- rexp(n, rate = r)
-# z <- rbinom(n, 2, r1 / r)
-# u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
-# v <- u + 0.75
-#
-# for (i in 1:n) {
-#   while (u[i] > x[i] | v[i] < x[i]) {
-#     x[i] <- rexp(1, rate = r)
-#     z[i] <- rbinom(1, 1, r1 / r)
-#     u[i] <- 0.75 * rbeta(1, 1 + z, 1) - 0.25     #runif(1,-.25,.5)
-#     v[i] <- u[i] + 0.75
-#   }
-# }
-#
-#
-# # x <- round(x, 1)
-# # u <- pmin(round(u, 1), x)
-# # v <- pmax(round(v, 1), x)
-#
-# res <- DTDAcif(x, u, v, comp.event = z, method = "indep")
+# x <- round(x, 1)
+# u <- pmin(round(u, 1), x)
+# v <- pmax(round(v, 1), x)
+
+res <- DTDAcif(x, u, v, z, method = "dep")
 # # DTDAcif(x, u, v, comp.event = z, method = "indep")

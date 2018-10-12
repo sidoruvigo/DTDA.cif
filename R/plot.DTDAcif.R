@@ -21,59 +21,43 @@
 #'
 #'
 #' @export
-plot.DTDAcif <-  function(x, ...) {
+plot.DTDAcif <-  function(x, main = "", xlab = "", ylab = "", ...) {
 
   res <- x
+  if (is.null(res$method)) {
 
-    if (res$method == "dep" & res$ties == TRUE) {
+    graphics::plot(res2$time[order(res$time)], cumsum(res$cif),
+                   type = "s", ylim = c(0, 1), xlim = c(min(res$time), max(res$time)),
+                   main = main, xlab = xlab, ylab = ylab)
 
-      graphics::plot(unlist(res$x[1])[order(unlist(res$x[1]))], cumsum(unlist(res$w[[1]])),
-           type = "s", ylim = c(0, 1), xlim = c(min(unlist(res$data)), max(unlist(res$data))))
+  } else {
 
-      for(i in 2:length(unique(res$z))){
-        graphics::lines(unlist(unlist(res$x[i]))[order(unlist(unlist(res$x[i])))],
-              cumsum(unlist(res$w[[i]])), type = "s", col = i)
-      }
+    if (res$method == "dep") {
 
-    }
+      graphics::plot(unlist(res$time[1])[order(unlist(res$time[1]))], cumsum(unlist(res$cif[[1]])),
+                     type = "s", ylim = c(0, 1), xlim = c(min(unlist(res$time)), max(unlist(res$time))),
+                     main = main, xlab = xlab, ylab = ylab)
 
-  if (res$method == "dep" & res$ties == FALSE){
-
-    graphics::plot(res$x[[1]]$time, cumsum(unlist(res$w[[1]])), type = "s",
-           ylim = c(0, 1), xlim = c(min(unlist(res$data)), max(unlist(res$data))))
-
-      for(i in 2:length(unique(res$z))){
-        graphics::lines(unlist(res$x[[i]]$time), cumsum(unlist(res$w[[i]])),
-              type = "s", col = i)
+      for(i in 2:length(res$cif)){
+        graphics::lines(unlist(unlist(res$time[i]))[order(unlist(unlist(res$time[i])))],
+              cumsum(unlist(res$cif[[i]])), type = "s", col = i)
       }
     }
 
 
+    if (res$method == "indep") {
 
-  if (res$method == "indep" & res$ties == TRUE) {
+      graphics::plot(res$time[order(res$time)], cumsum(unlist(res$cif[1])),
+                     type = "s", ylim = c(0, 1), xlim = c(min(res$time), max(res$time)),
+                     main =  main, xlab = xlab, ylab = ylab)
 
-    graphics::plot(unlist(res$x)[order(unlist(res$x))], cumsum(unlist(res$w[1])),
-           type = "s", ylim = c(0, 1), xlim = c(min(unlist(res$x)), max(unlist(res$x))))
-
-      for(i in 2:length(unique(res$z))){
-        graphics::lines(unlist(res$x)[order(unlist(res$x))], cumsum(unlist(res$w[i])),
-              type = "s", col = i)
-      }
-
-
-    }
-
-  if (res$method == "indep" & res$ties == FALSE){
-
-    graphics::plot(res$x$time, cumsum(unlist(res$w[[1]])), type = "s", ylim = c(0, 1),
-           xlim = c(min(unlist(res$data)), max(unlist(res$data))))
-      for(i in 2:length(unique(res$z))){
-        x <- unlist(res$data)
-        graphics::lines(x[order(x)], cumsum(unlist(res$w[[i]])),
-              type = "s", col = i)
+      for(i in 2:length(res$cif)){
+        graphics::lines(res$time[order(res$time)], cumsum(unlist(res$cif[i])),
+                        type = "s", col = i)
       }
     }
   }
+}
 
 
 
@@ -84,10 +68,6 @@ plot.DTDAcif <-  function(x, ...) {
 #-------------------------------------------------------------------------------
 
 # Descomentar para ejecutar
-
-#~~~~~~~~~~~~~
-# Sin empates
-#~~~~~~~~~~~~~
 
 # set.seed(06062018)
 #
@@ -118,33 +98,9 @@ plot.DTDAcif <-  function(x, ...) {
 #
 # res1 <- DTDAcif(x, u, v, comp.event = z, method = "indep")
 # plot(res1)
-
-
-#~~~~~~~~~~~~~
-# Con empates
-#~~~~~~~~~~~~~
-
-
-# set.seed(06062018)
 #
-# n <- 5000
-#
-# r1 <- 1
-# r2 <- 3
-# r <- r1 + r2
-# x <- rexp(n, rate = r)
-# z <- rbinom(n, 2, r1 / r)
-# u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
-# v <- u + 0.75
-#
-# for (i in 1:n) {
-#   while (u[i] > x[i] | v[i] < x[i]) {
-#     x[i] <- rexp(1, rate = r)
-#     z[i] <- rbinom(1, 1, r1 / r)
-#     u[i] <- 0.75 * rbeta(1, 1 + z, 1) - 0.25     #runif(1,-.25,.5)
-#     v[i] <- u[i] + 0.75
-#   }
-# }
+# res2 <- DTDAcif(x, u, v)
+# plot(res2)
 #
 #
 # x <- round(x, 1)
@@ -152,9 +108,11 @@ plot.DTDAcif <-  function(x, ...) {
 # v <- pmax(round(v, 1), x)
 #
 #
-# res2 <- DTDAcif(x, u, v, comp.event = z, method = "dep")
-# plot(res2)
+# res <- DTDAcif(x, u, v, comp.event = z, method = "dep")
+# plot(res, ylab = "resR")
 #
-# res3 <- DTDAcif(x, u, v, comp.event = z, method = "indep")
-# plot(res3)
-
+# res1 <- DTDAcif(x, u, v, comp.event = z, method = "indep")
+# plot(res1, xlab = "asd")
+#
+# res2 <- DTDAcif(x, u, v)
+# plot(res2)
