@@ -4,7 +4,7 @@
 \alias{plot.DTDAcif}
 \title{plot.DTDAcif}
 \usage{
-\method{plot}{DTDAcif}(x, ...)
+\method{plot}{DTDAcif}(x, main = "", xlab = "", ylab = "", ...)
 }
 \arguments{
 \item{x}{DTDAcif object.}
