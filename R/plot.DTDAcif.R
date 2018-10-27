@@ -2,7 +2,12 @@
 #'
 #' @title plot.DTDAcif
 #' @param x DTDAcif object.
-#'
+#' @param intervals TODO
+#' @param level TODO
+#' @param main TODO
+#' @param xlab TODO
+#' @param ylab TODO
+#' @param ... TODO
 #'
 #' @section Acknowledgements:
 #' \itemize{
@@ -21,40 +26,154 @@
 #'
 #'
 #' @export
-plot.DTDAcif <-  function(x, main = "", xlab = "", ylab = "", ...) {
+plot.DTDAcif <- function(x, intervals = TRUE, level = 0.95,  main = "", xlab = "", ylab = "", ...) {
 
-  res <- x
-  if (is.null(res$method)) {
+  if (!inherits(x, "DTDAcif")) {
+    stop("'x' must be of class 'DTDAcif'")
+  }
 
-    graphics::plot(res2$time[order(res$time)], cumsum(res$cif),
-                   type = "s", ylim = c(0, 1), xlim = c(min(res$time), max(res$time)),
-                   main = main, xlab = xlab, ylab = ylab)
+  r <- res
+  if (is.null(r$method)) {
+
+    graphics::plot(c(min(r$data$x), r$data$x[order(r$data$x)]), c(0, cumsum(r$cif)),
+         type = "s", ylim = c(0, 1), xlim = c(min(r$data$x),
+                                              max(r$data$x[order(r$data$x)])),
+         main = main, xlab = xlab, ylab = ylab)
+
+    if(intervals == T) {
+      cif <- unlist(lapply(1:length(unique(r$data$x)),
+                           function(i) stats::approx(r$data$x[order(r$data$x)], cumsum(r$cif),
+                                              xout = unique(r$data$x[order(r$data$x)])[i],
+                                              ties = max, yleft = stats::approx(r$data$x[order(r$data$x)], cumsum(r$cif),
+                                                                         xout = min(r$data$x[order(r$data$x)]), ties = min)$y,
+                                              method = "constant", rule = 2)$y))
+
+
+      lim.sup <- cif + stats::qnorm((1 - level) / 2,  lower.tail = F) * r$sd.boot
+      lim.sup <- unlist(lapply(1:length(lim.sup), function(i) if(lim.sup[i] > 1) lim.sup[i] = 1 else lim.sup[i] = lim.sup[i]))
+
+      lim.inf <- cif - stats::qnorm((1 - level) / 2, lower.tail = F ) * r$sd.boot
+      lim.inf <- unlist(lapply(1:length(lim.inf), function(i) if(lim.inf[i] < 0) lim.inf[i] = 0  else lim.inf[i] = lim.inf[i]))
+
+
+      graphics::lines(unique(r$data$x)[order(unique(r$data$x))], lim.sup, type = "s", col = "lightgray", lty = 2)
+      graphics::lines(unique(r$data$x)[order(unique(r$data$x))], lim.inf, type = "s", col = "lightgray", lty = 2)
+    }
 
   } else {
 
-    if (res$method == "dep") {
+    if (r$method == "dep") {
 
-      graphics::plot(unlist(res$time[1])[order(unlist(res$time[1]))], cumsum(unlist(res$cif[[1]])),
-                     type = "s", ylim = c(0, 1), xlim = c(min(unlist(res$time)), max(unlist(res$time))),
-                     main = main, xlab = xlab, ylab = ylab)
+      nz <- length(unique(r$data$z))
+      cif <- vector("list", nz)
 
-      for(i in 2:length(res$cif)){
-        graphics::lines(unlist(unlist(res$time[i]))[order(unlist(unlist(res$time[i])))],
-              cumsum(unlist(res$cif[[i]])), type = "s", col = i)
+      for(j in 1:nz){
+        cif[[j]] <- unlist(lapply(1:length(unique(unlist(r$time[j]))),
+                                  function(i) stats::approx(unlist(r$time[j])[order(unlist(r$time[j]))],
+                                                     cumsum(unlist(r$cif[[j]])),
+                                                     xout = unique(unlist(r$time[j])[order(unlist(r$time[j]))])[i],
+                                                     ties = max, yleft = stats::approx(unlist(r$time[j])[order(unlist(r$time[j]))],
+                                                                                cumsum(unlist(r$cif[[j]])),
+                                                                                xout = min(unlist(r$time[j])[order(unlist(r$time[j]))]),
+                                                                                ties = min)$y,
+                                                     method = "constant", rule = 2)$y))
+        # pointsb[[j]] <- na.omit(unlist(pointsb[[j]]))
       }
+
+
+
+      lim.sup <- vector("list", nz)
+      lim.inf <- vector("list", nz)
+
+      for(p in 1:nz){
+        lim.sup1 <- cif[[p]] + stats::qnorm((1-level )/2, lower.tail = F) * r$sd.boot[[p]]
+        lim.sup[[p]] <- unlist(lapply(1:length(lim.sup1), function(i) if(lim.sup1[i] > 1) lim.sup1[i] = 1 else lim.sup1[i] = lim.sup1[i]))
+
+        lim.inf1 <- cif[[p]] - stats::qnorm((1-level )/2, lower.tail = F ) * r$sd.boot[[p]]
+        lim.inf[[p]] <- unlist(lapply(1:length(lim.inf1), function(i) if(lim.inf1[i] < 0) lim.inf1[i] = 0  else lim.inf1[i] = lim.inf1[i]))
+
+      }
+
+      invisible(lapply(1:length(r$cif),
+                       function(i){
+                         if  (i == 1) {
+                           graphics::plot(unlist(r$time[i])[order(unlist(r$time[i]))],
+                                          cumsum(unlist(r$cif[i])), type = "s",
+                                          ylim = c(0, 1),
+                                          xlim = c(min(unlist(r$time[i])),
+                                                   max(unlist(r$time[i]))),
+                                          main = main, xlab = xlab, ylab = ylab)
+                         } else {
+                           graphics::lines(unlist(r$time[i])[order(unlist(r$time[i]))], cumsum(unlist(r$cif[[i]])),
+                                           type = "s", col = i)
+                           if (intervals == T) {
+                             for(u in 1:nz) {
+                               graphics::lines(unique(unlist(r$time[u])[order(unlist(r$time[u]))]), lim.sup[[u]], type = "s",
+                                     col = "lightgray", lty = 2)
+                               graphics::lines(unique(unlist(r$time[u])[order(unlist(r$time[u]))]), lim.inf[[u]], type = "s",
+                                     col = "lightgray", lty = 2)
+                             }
+                           }
+                         }
+                       }))
     }
 
 
-    if (res$method == "indep") {
+    if (r$method == "indep") {
 
-      graphics::plot(res$time[order(res$time)], cumsum(unlist(res$cif[1])),
-                     type = "s", ylim = c(0, 1), xlim = c(min(res$time), max(res$time)),
-                     main =  main, xlab = xlab, ylab = ylab)
+      nz <- length(unique(r$data$z))
+      cif <- vector("list", nz)
 
-      for(i in 2:length(res$cif)){
-        graphics::lines(res$time[order(res$time)], cumsum(unlist(res$cif[i])),
-                        type = "s", col = i)
+      data <- data.frame(cbind(r$data$x, r$data$z))
+      colnames(data) <- c("x", "z")
+      cif <- lapply(1:nz, function(j) unlist(lapply(1:length(unique(subset(data.frame(data),
+                                                                           data.frame(data)$z == j))$x),
+                                                    function(i) stats::approx(unlist(unlist(r$time))[order(unlist(unlist(r$time)))],
+                                                                       cumsum(unlist(r$cif[[j]])),
+                                                                       xout = unique(subset(data.frame(data),
+                                                                                            data.frame(data)$z == j)$x[order(subset(data.frame(data), data.frame(data)$z == j)$x)])[i],
+                                                                       ties = max,
+                                                                       yleft = stats::approx(r$data$x[order(r$data$x)],
+                                                                                      cumsum(unlist(r$cif[[j]])),
+                                                                                      xout = min(r$data$x[order(r$data$x)]),
+                                                                                      ties = min)$y,
+                                                                       method = "constant", rule = 2)$y)))
+
+      for(w in 1:nz){
+        cif[[w]] <- stats::na.omit(cif[[w]])
       }
+
+      lim.sup <- vector("list", nz)
+      lim.inf <- vector("list", nz)
+
+      for(p in 1:nz){
+        lim.sup1 <- cif[[p]] + stats::qnorm((1-level )/2, lower.tail = F) * r$sd.boot[[p]]
+        lim.sup[[p]] <- unlist(lapply(1:length(lim.sup1), function(i) if(lim.sup1[i] > 1) lim.sup1[i] = 1 else lim.sup1[i] = lim.sup1[i]))
+
+        lim.inf1 <- cif[[p]]- stats::qnorm((1-level )/2, lower.tail = F ) * r$sd.boot[[p]]
+        lim.inf[[p]] <- unlist(lapply(1:length(lim.inf1), function(i) if(lim.inf1[i] < 0) lim.inf1[i] = 0  else lim.inf1[i] = lim.inf1[i]))
+
+      }
+
+      invisible(lapply(1:length(r$cif),
+                       function(i){
+                         if (i == 1) {
+                           graphics::plot(c(min(r$time[order(r$time)]), r$time[order(r$time)]),
+                                          c(0, cumsum(unlist(r$cif[i]))), type = "s",
+                                          ylim = c(0, 1), xlim = c(min(r$time), max(r$time)),
+                                          main = main, xlab = xlab, ylab = ylab)
+                         } else {
+                           graphics::lines(r$time[order(r$time)], cumsum(unlist(r$cif[[i]])),
+                                           type = "s", col = i)
+                           if(intervals == T) {
+                             for(i in 1:nz){
+
+                               graphics::lines(unique(subset(data.frame(data), data.frame(data)$z == i)$x[order(subset(data.frame(data), data.frame(data)$z == i)$x)]), lim.sup[[i]], type = "s", col = "lightgray")
+                               graphics::lines(unique(subset(data.frame(data), data.frame(data)$z == i)$x[order(subset(data.frame(data), data.frame(data)$z == i)$x)]), lim.inf[[i]], type = "s", col = "lightgray")
+                             }
+                           }
+                         }
+                       }))
     }
   }
 }
@@ -64,7 +183,7 @@ plot.DTDAcif <-  function(x, main = "", xlab = "", ylab = "", ...) {
 
 
 #-------------------------------------------------------------------------------
-# Ejemplos #
+# Ejemplos
 #-------------------------------------------------------------------------------
 
 # Descomentar para ejecutar

@@ -11,9 +11,8 @@
 #' @param B TODO
 #' @param level TODO
 #'
-#' @details
-#  TODO
-
+#' @details TODO
+#
 #' @return  A list containing:
 #'
 #' @section Acknowledgements:
@@ -29,16 +28,14 @@
 #' \item{Maintainer: José Carlos Soage González. \email{jsoage@@uvigo.es}}
 #' }
 #'
-#' @references
-#' TODO
+#' @references TODO
 #'
 #' @examples
-#'
+#' #TODO
 #'
 #' @export
-DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
-                    #,boot = TRUE, B = 300, level = 0.95
-) {
+DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep"),
+                    boot = TRUE, B = 300, level = 0.95) {
 
   cat("Call:", "\n")
   print(match.call())
@@ -57,7 +54,14 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
 
   if(missing(method) && !missing(comp.event)){
     method <- "dep"
-    cat("'dep' method used by default")
+    cat("'dep' method used by default", "\n")
+  }
+
+
+  n <- length(x)
+
+  if(!missing(comp.event)){
+    nz <- length(unique(comp.event))
   }
 
   `shen` <- function(X, U = NA, V = NA, wt = NA, error = NA, nmaxit = NA) {
@@ -167,10 +171,9 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
     kMUV <- cbind(C[, 2], C[, 3], k)
 
     kuv <- numeric(nrow(C))
-    pb <- utils::txtProgressBar(min = 0, max = nrow(kMUV) , style = 3)
 
     for(i in 1:nrow(kMUV)) {
-      utils::setTxtProgressBar(pb, i)
+
       indbbb <- ((kMUV[, 1] == kMUV[i, 1]) & (kMUV[, 2] == kMUV[i, 2]))
       pos1 <- min(which(indbbb == TRUE))
 
@@ -213,7 +216,7 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
     w  <- 1 / res$biasf
     w <- w / sum(w)
 
-    r <- list(time = res$biasf, cif = w)
+    r <- list(time = res$biasf, cif = w , data = data.frame(cbind(x, z)))
 
     # List names
     names(r$time) <- "time"
@@ -271,7 +274,7 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
     }
 
 
-    r <- list(method = method, time = x1, cif = ww1)
+    r <- list(method = method, time = x1, cif = ww1, data = data.frame(cbind(x, z)))
 
     # List names
     names(r$time) <- paste0("time_", 1:length(x1))
@@ -289,10 +292,254 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
       w0[i] <- list(w * ifelse(z == i, 1, 0))
     }
 
-    r <- list(method = method, time = x,  cif = w0)
+    r <- list(method = method, time = x,  cif = w0, data = data.frame(cbind(x, z)))
 
     # List names
     names(r$cif) <- paste0("cif_", 1:length(w0))
+  }
+
+  # ifelse(missing(comp.event), data <- cbind(x, u , v), data <- cbind(x, z, u , v))
+
+
+
+
+  if(boot == TRUE) {
+
+    ties <- ifelse(length(x) == length(unique(x)), F, T)
+
+      if(missing(comp.event)){
+
+        data <- cbind(x, u , v)
+
+
+        if(ties == F){
+          cifb <- matrix(0, B, length(x))
+        } else {
+          cifb <- matrix(0, B, length(unique(x)))
+        }
+
+        # library(doParallel)
+        cl <- parallel::makeCluster(parallel::detectCores())
+        doParallel::registerDoParallel(cl)
+
+        pointsb <- foreach::foreach(b = 1:B, .combine = rbind) %dopar%  {
+          rem <- sample(1:length(x), length(x), replace = TRUE)
+          rem <- data.frame(data[rem, ])
+
+          # if(missing(comp.event)){
+
+          res <- shen(rem$x, rem$u , rem$v)
+          w  <- 1 / res$biasf
+          w <- w / sum(w)
+
+          rb <- list(time = res$biasf, cif = w)
+
+          # List names
+          names(rb$time) <- "time"
+          names(rb$cif) <- "cif"
+
+          # if(!missing(method)){
+          #   warning("'method' is not necessary")
+          # }
+
+          if(length(unique(rem[, 1])) == 1){
+            rep <- which(data[,1] == unique(rem$x))
+
+            pointsb <- c(rep(min(cumsum(rb$cif)), rep - 1), rep(max(cumsum(rb$cif)), length(data[,1]) - length(rep(min(cumsum(rb$cif)), rep - 1))))
+
+          } else {
+
+          pointsb <- unlist(lapply(1:length(unique(x)),
+                                   function(i) stats::approx(rem$x[order(rem$x)], cumsum(rb$cif),
+                                                      xout = unique(x[order(x)])[i],
+                                                      ties = max, yleft = stats::approx(rem$x[order(rem$x)], cumsum(rb$cif),
+                                                                                 xout = min(rem$x[order(rem$x)]), ties = min)$y,
+                                                      method = "constant", rule = 2)$y))
+
+}
+
+          return (pointsb)
+        }
+        parallel::stopCluster(cl)
+
+        sd.boot <- apply(pointsb, 2, stats::sd)
+        r <- c(r, sd.boot = list(sd.boot))
+
+      } else {
+
+        data <- cbind(x, z, u , v)
+
+        if(method == "indep"){
+
+          cifb <- vector("list", length = nz)
+
+          cifb  <- lapply(1:nz, function(i) cifb[[i]] <- matrix(0, B, length(which(unlist(r$cif[i]) != 0))))
+
+          if(ties == T){
+            cifb  <- lapply(1:nz, function(i) cifb[[i]] <- matrix(0, B, length(which(unique(unlist(r$cif[i])) != 0))))
+          }
+
+          pb <- utils::txtProgressBar(min = 0, max = B , style = 3)
+
+          foreach::foreach(b = 1:B) %do% {
+            utils::setTxtProgressBar(pb, b)
+            rem <- sample(1:n, n, replace = TRUE)
+            rem <- data.frame(data[rem, ])
+
+            res <- shen(rem$x, rem$u , rem$v)
+            w <- 1 / res$biasf
+            w <- w / sum(w)   # Weights for independence (biased estimator if (U, V) depends on Z)
+
+            w0 <- vector("list", nz)
+
+            for(i in 1:nz) {
+              w0[i] <- list(w * ifelse(rem$z == i, 1, 0))
+            }
+
+            rb <- list(method = "dep", time = x,  cif = w0)
+
+            # List names
+            names(rb$cif) <- paste0("cif_", 1:length(w0))
+
+
+            # if( length(unique(rem$x)) != 1){
+
+            pointsb <- vector("list", nz)
+
+            if(length(unique(rem[, 1])) == 1) {
+            rep <- which(data[,1] == unique(rem$x))
+            pointsb <-  lapply(1:nz, function(w) c(rep(min(cumsum(rb$cif[[w]])), rep - 1), rep(max(cumsum(rb$cif[[w]])), length(data[,1]) - length(rep(min(cumsum(rb$cif[[w]])), rep - 1)))))
+
+            }else{
+            pointsb <- lapply(1:nz, function(j) unlist(lapply(1:length(unique(subset(data.frame(data),
+                                                                                     data.frame(data)$z == j))$x),
+                                                              function(i) stats::approx(unlist(unlist(rb$time))[order(unlist(unlist(rb$time)))],
+                                                                                 cumsum(unlist(rb$cif[[j]])),
+                                                                                 xout = unique(subset(data.frame(data),
+                                                                                                      data.frame(data)$z == j)$x[order(subset(data.frame(data), data.frame(data)$z == j)$x)])[i],
+                                                                                 ties = max,
+                                                                                 yleft = stats::approx(rem$x[order(rem$x)],
+                                                                                                cumsum(unlist(rb$cif[[j]])),
+                                                                                                xout = min(rem$x[order(rem$x)]),
+                                                                                                ties = min)$y,
+                                                                                 method = "constant", rule = 2)$y)))
+
+          }
+
+
+            for(w in 1:nz){
+              pointsb[[w]] <- stats::na.omit(pointsb[[w]])
+            }
+
+            for(w in 1:nz){
+
+              cifb[[w]][b,] <- pointsb[[w]]
+
+            }
+          }
+
+
+
+          #####################################
+
+
+          sd.boot <- vector("list", nz)
+
+
+          for(k in 1:nz){
+            sd.boot[[k]] <- apply(cifb[[k]], 2, stats::sd)  # Esto lo devuelve la función en res$sd.boot
+          }
+
+          r <- c(r, sd.boot = list(sd.boot))
+        }
+
+
+        if(method == "dep"){
+
+          cifb <- vector("list", length = nz)
+
+          for(i in 1:nz){
+            cifb[[i]] <- matrix(NA, B, length(unlist(r$cif[i])))
+          }
+
+          if(ties == T){
+            for(i in 1:nz){
+
+              cifb[[i]] <- matrix(NA, B, length(unique(unlist(r$cif[i]))))
+
+            }
+          }
+
+          pb <- utils::txtProgressBar(min = 0, max = B , style = 3)
+
+          foreach::foreach(b = 1:B) %do% {
+            utils::setTxtProgressBar(pb, b)
+            rem <- sample(1:n, n, replace = TRUE)
+            rem <- data.frame(data[rem, ])
+
+            x1   <- vector("list", length(unique(rem$z)))
+            u1   <- vector("list", length(unique(rem$z)))
+            v1   <- vector("list", length(unique(rem$z)))
+            res1 <- vector("list", length(unique(rem$z)))
+            w1   <- vector("list", length(unique(rem$z)))
+
+            for (i in  nz:1) {
+              x1[i] <- list(rem$x[rem$z == i])
+              u1[i] <- list(rem$u[rem$z == i])
+              v1[i] <- list(rem$v[rem$z == i])
+              res1[i] <- list(shen(unlist(x1[[i]]), unlist(u1[[i]]), unlist(v1[[i]])))
+              w1[i] <- list(1 / res1[[i]]$biasf)
+            }
+
+            ww1 <- vector("list", nz)
+
+            for(i in 1:nz){
+
+              ww1[i] <- list(unlist(w1[i]) / sum(sum(unlist(w1))))
+            }
+
+
+            rb <- list(method = "dep", time = x1, cif = ww1)
+
+            # List names
+            names(rb$time) <- paste0("time_", 1:length(x1))
+            names(rb$cif) <- paste0("cif_", 1:length(ww1))
+
+            pointsb <- vector("list", nz)
+
+
+            pointsb <-  lapply(1:nz, function(j) unlist(lapply(1:length(unique(unlist(r$time[j]))),
+                                            function(i) stats::approx(unlist(rb$time[j])[order(unlist(rb$time[j]))],
+                                                               cumsum(unlist(rb$cif[[j]])),
+                                                               xout = unique(unlist(r$time[j])[order(unlist(r$time[j]))])[i],
+                                                               ties = max, yleft = stats::approx(unlist(rb$time[j])[order(unlist(rb$time[j]))],
+                                                                                          cumsum(unlist(rb$cif[[j]])),
+                                                                                          xout = min(unlist(rb$time[j][order(rb$time[j])])),
+                                                                                          ties = min)$y,
+                                                               method = "constant", rule = 2)$y)))
+
+
+
+
+            for(w in 1:nz){
+
+              cifb[[w]][b, c(1:length(pointsb[[w]]))] <- pointsb[[w]]
+            }
+          }
+
+
+          sd.boot <- vector("list", nz)
+
+          for(k in 1:nz) {
+            sd.boot[[k]] <- apply(cifb[[k]], 2, stats::sd, na.rm = T)
+            sd.boot[[k]] <- stats::na.omit(sd.boot[[k]])
+
+          }
+
+          r <- c(r, sd.boot = list(sd.boot))
+
+        }
+      }
   }
 
   class(r) <- c('list', 'DTDAcif')
@@ -310,13 +557,13 @@ DTDAcif <- function(x, u, v, comp.event, method = c("indep", "dep")
 
 set.seed(06062018)
 
-n <- 5000
+n <- 15
 
 r1 <- 1
 r2 <- 3
 r <- r1 + r2
 x <- rexp(n, rate = r)
-z <- rbinom(n, 2, r1 / r)
+z <- rbinom(n, 1, r1 / r)
 u <- 0.75 * rbeta(n, 1 + z, 1) - 0.25    #runif(n,-.25,.5)
 v <- u + 0.75
 
@@ -329,10 +576,13 @@ for (i in 1:n) {
   }
 }
 
-#
+
 # x <- round(x, 1)
 # u <- pmin(round(u, 1), x)
 # v <- pmax(round(v, 1), x)
-
-res <- DTDAcif(x, u, v, z, method = "dep")
-# # DTDAcif(x, u, v, comp.event = z, method = "indep")
+#
+res <- DTDAcif(x, u, v, z,  method = "dep", boot = T)
+plot(res)
+res <- DTDAcif(x, u, v, boot = T)
+plot(res, level = 0.99)
+summary(res)

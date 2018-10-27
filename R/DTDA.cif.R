@@ -16,6 +16,7 @@
 #' \itemize{
 #' \item{DTDAcif: }
 #' \item{plot.DTDAcif: S3 method to plot a DTDAcif object by using the generic plot function.}
+#' \item{summary.DTDAcif: S3 method to summary a DTDAcif object by using the generic summary function.}
 #' }
 #'
 #' @section Acknowledgements:
@@ -24,7 +25,7 @@
 #' \item{José Carlos Soage was supported by Red Tecnológica de Matemática Industrial (Red TMATI), Cons. de Cultura, Educación e OU, Xunta de Galicia (ED341D R2016/051) and by Grupos de Referencia Competitiva, Consolidación y Estructuración de Unidades de Investigación Competitivas del SUG, Cons. de Cultura, Educación e OU, Xunta de Galicia (GRC ED431C 2016/040).}
 #' }
 #'
-#' @references
+#' @references TODO
 #'
 #' @author
 #' \itemize{
