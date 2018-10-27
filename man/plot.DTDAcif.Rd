@@ -4,10 +4,23 @@
 \alias{plot.DTDAcif}
 \title{plot.DTDAcif}
 \usage{
-\method{plot}{DTDAcif}(x, main = "", xlab = "", ylab = "", ...)
+\method{plot}{DTDAcif}(x, intervals = TRUE, level = 0.95, main = "",
+  xlab = "", ylab = "", ...)
 }
 \arguments{
 \item{x}{DTDAcif object.}
+
+\item{intervals}{TODO}
+
+\item{level}{TODO}
+
+\item{main}{TODO}
+
+\item{xlab}{TODO}
+
+\item{ylab}{TODO}
+
+\item{...}{TODO}
 }
 \description{
 S3 method to plot a DTDAcif object by using the generic plot function.

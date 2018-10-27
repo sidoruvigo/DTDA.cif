@@ -9,6 +9,7 @@
 \itemize{
 \item{DTDAcif: }
 \item{plot.DTDAcif: S3 method to plot a DTDAcif object by using the generic plot function.}
+\item{summary.DTDAcif: S3 method to summary a DTDAcif object by using the generic summary function.}
 }
 }
 \description{
@@ -34,7 +35,7 @@ Documentation for package ‘DTDA.cif’ version 1.0
 }
 
 \references{
-
+TODO
 }
 \author{
 \itemize{
