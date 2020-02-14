@@ -3,3 +3,6 @@
 S3method(plot,DTDAcif)
 S3method(summary,DTDAcif)
 export(DTDAcif)
+import(Rcpp)
+import(foreach)
+useDynLib(DTDA.cif)

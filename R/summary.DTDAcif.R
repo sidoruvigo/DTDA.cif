@@ -1,16 +1,12 @@
-#' S3 method to summary a DTDAcif object by using the generic summary function.
+#' S3 method to summarize a DTDAcif object by using the generic summary function.
 #'
 #' @title summary.DTDAcif
+#'
+#' @aliases summary.DTDAcif
+#'
 #' @param object DTDAcif object.
-#' @param ... TODO
+#' @param ... Additonal parameters.
 #'
-#' @section Acknowledgements:
-#' \itemize{
-#' \item{Jacobo de Uña-Álvarez was supported by Grant MTM2014-55966-P, Spanish Ministry of Economy and Competitiveness.}
-#' \item{José Carlos Soage was supported by Red Tecnológica de Matemática Industrial (Red TMATI), Cons. de Cultura, Educación e OU, Xunta de Galicia (ED341D R2016/051) and by Grupos de Referencia Competitiva, Consolidación y Estructuración de Unidades de Investigación Competitivas del SUG, Cons. de Cultura, Educación e OU, Xunta de Galicia (GRC ED431C 2016/040).}
-#' }
-#'
-#' @references TODO
 #'
 #' @author
 #' \itemize{
@@ -23,67 +19,77 @@
 #' @export
 summary.DTDAcif <- function(object, ...){
 
+  res <- NULL
   res <- object
-  utils::globalVariables(res)
   nz <- length(unique(res$data$z))
 
   if (is.null(res$method)) {
 
     if(is.null(res$sd.boot)){
-      df <- data.frame(res$time, res$cif)
-      colnames(df) <- c("time", "cif")
-      print(df)
+      df <- data.frame(unique(data.frame(res$data$x[order(res$data$x)])),
+                       res$biasf[order(as.numeric(rownames(unique(data.frame(res$data$x)))))],
+                       cumsum(res$cif.mas[order(res$data$x)])[as.numeric(rownames(unique(data.frame(res$data$x))))])
+      colnames(df) <- c("time", "biasf", "cif")
+      return(df)
     } else {
 
-      df <- data.frame(res$time, res$cif, res$sd.boot)
-      colnames(df) <- c("time", "cif", "sd.boot")
-      print(df)
-     }
+      df <- data.frame(unique(data.frame(res$data$x[order(res$data$x)])),
+                       res$biasf[order(as.numeric(rownames(unique(data.frame(res$data$x)))))],
+                       cumsum(res$cif[order(res$data$x)])[as.numeric(rownames(unique(data.frame(res$data$x))))],
+                       res$sd.boot)
+      colnames(df) <- c("time", "biasf", "cif", "sd.boot")
+      return(df)
+    }
 
   } else {
 
     if (res$method == "dep") {
+
+      x   <- vector("list", length(unique(res$data$z)))
+
+      for (i in  length(unique(res$data$z)):1) {
+
+        x[i]   <- list(res$data$x[res$data$z == i])
+
+      }
+      names(x) <- paste0("time_", 1:length(unique(res$data$z)))
+
       df <- list()
       if(is.null(res$sd.boot)) {
 
-      for(i in 1:length(res$cif)) {
+        for(i in 1:length(res$cif.mas)) {
 
-        df[[i]] <-  cbind(data.frame(res$time[i]), data.frame(res$cif[i]))
-      }
+          df[[i]] <-  cbind(unique(data.frame(x[i][order(x[i])])),
+                            data.frame(res$biasf[i])[as.numeric(rownames(unique(data.frame(x[i])))), ],
+                            cumsum(unlist(res$cif.mas[i][order(res$data$x)]))[as.numeric(rownames(unique(data.frame(x[i]))))])
+          names(df[[i]]) <- c("x", "biasf", "cif")
+          }
 
-      names(df) <- paste0("Comp_event_", 1:length(res$cif))
+        names(df) <- paste0("Comp_event_", 1:length(res$cif.mas))
+        return(df)
 
-      for(i in 1:length(res$cif)) {
-        print(df[i], sep = "\n")
-      }
+        for(i in 1:length(res$cif.mas)) {
+          print(df[[i]], sep = "\n")
+        }
 
       } else {
-        elem <- vector("list", nz)
-        for(w in 1:nz) {
-          elem[[w]] <- which(unlist(res$cif[w]) != 0)
-        }
-
-        boot <- vector("list", nz)
-        for(w in 1:nz) {
-          boot[[w]] <- data.frame(matrix(0, ncol = 1, nrow = length(res$time[[w]])))
-          colnames(boot[[w]]) <- "sd.boot"
-        }
-
-        for(w in 1:nz) {
-          boot[[w]][unlist(elem[[w]]),] <- res$sd.boot[[w]]
-        }
 
         for(i in 1:length(res$cif)) {
-          df[[i]] <-  cbind(data.frame(res$time[i]), data.frame(res$cif[i]), boot[[i]])
-        }
+          df[[i]] <-  cbind(unique(data.frame(x[i][order(x[i])])),
+                            data.frame(res$biasf[i])[as.numeric(rownames(unique(data.frame(x[i])))), ],
+                            cumsum(unlist(res$cif.mas[i][order(res$data$x)]))[as.numeric(rownames(unique(data.frame(x[i]))))],
+                            res$sd.boot[[i]])
+          names(df[[i]]) <- c(paste0("time_", i),  paste0("biasf_", i), paste0("cif", i) , paste0("sd.boot_", i))
 
-        names(df) <- paste0("Comp_event_", 1:length(res$cif))
+          }
 
-        for(i in 1:length(res$cif)) {
+        names(df) <- paste0("Comp_event_", 1:length(res$cif.mas))
+        return(df)
+        for(i in 1:length(res$cif.mas)) {
           print(df[i], sep = "\n")
         }
+      }
     }
-}
 
     if (res$method == "indep") {
 
@@ -91,50 +97,39 @@ summary.DTDAcif <- function(object, ...){
 
       if(is.null(res$sd.boot)){
 
-      for(i in 1:length(res$cif)){
+        for(i in 1:length(res$cif.mas)){
 
-        df[[i]] <-  cbind(res$time, data.frame(res$cif[i]))
-      }
+          df[[i]] <- cbind(x = data.frame(unique(res$data$x[res$data$z == i])),
+                           biasf = res$biasf[which(res$data$z == i)][as.numeric(rownames(unique(data.frame(res$data$x[res$data$z == i]))))],
+                           as.numeric(cumsum(unlist(res$cif.mas[i][order(res$data$x)]))[as.numeric(rownames(unique(data.frame(res$data$x[res$data$z == i]))))]))
+          names(df[[i]]) <- c(paste0("time_", i),  paste0("biasf_", i), paste0("cif_", i))
+          }
 
-      names(df) <- paste0("Comp_event_", 1:length(res$cif))
-
-      for(i in 1:length(res$cif)){
-        print(df[i], sep = "\n")
-      }
+        names(df) <- paste0("Comp_event_", 1:length(res$cif.mas))
+        return(df)
+        for(i in 1:length(res$cif.mas)){
+          print(df[i], sep = "\n")
+        }
 
       }else{
 
-        elem <- vector("list", nz)
-        for(w in 1:nz){
-          elem[[w]] <- which(unlist(res$cif[w]) != 0)
-        }
+        for(i in 1:length(res$cif.mas)){
 
-        boot <- vector("list", nz)
-        for(w in 1:nz){
-          boot[[w]] <- data.frame(matrix(0, ncol = 1, nrow = length(data$z)))
-          colnames(boot[[w]]) <- "sd.boot"
-        }
-
-
-          for(w in 1:nz){
-          boot[[w]][unlist(elem[[w]]),] <- res$sd.boot[[w]]
-          }
-
-        for(i in 1:length(res$cif)){
-
-          df[[i]] <-  cbind(res$time, data.frame(res$cif[i]), boot[[i]])
+          df[[i]] <-  cbind(x = data.frame(unique(res$data$x[res$data$z == i])),
+                            biasf = res$biasf[which(res$data$z == i)][as.numeric(rownames(unique(data.frame(res$data$x[res$data$z == i]))))],
+                            as.numeric(cumsum(unlist(res$cif.mas[i][order(res$data$x)]))[as.numeric(rownames(unique(data.frame(res$data$x[res$data$z == i]))))]),
+                            res$sd.boot[[i]])
+          names(df[[i]]) <- c(paste0("time_", i),  paste0("biasf_", i), paste0("cif_", i) , paste0("sd.boot_", i))
         }
 
 
-        names(df) <- paste0("Comp_event_", 1:length(res$cif))
-
-        for(i in 1:length(res$cif)){
+        names(df) <- paste0("Comp_event_", 1:length(res$cif.mas))
+        return(df)
+        for(i in 1:length(res$cif.mas)){
           print(df[i], sep = "\n")
         }
       }
     }
   }
 }
-
-# summary(res)
 

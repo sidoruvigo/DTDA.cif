@@ -9,21 +9,10 @@
 \arguments{
 \item{object}{DTDAcif object.}
 
-\item{...}{TODO}
+\item{...}{Additonal parameters.}
 }
 \description{
-S3 method to summary a DTDAcif object by using the generic summary function.
-}
-\section{Acknowledgements}{
-
-\itemize{
-\item{Jacobo de Uña-Álvarez was supported by Grant MTM2014-55966-P, Spanish Ministry of Economy and Competitiveness.}
-\item{José Carlos Soage was supported by Red Tecnológica de Matemática Industrial (Red TMATI), Cons. de Cultura, Educación e OU, Xunta de Galicia (ED341D R2016/051) and by Grupos de Referencia Competitiva, Consolidación y Estructuración de Unidades de Investigación Competitivas del SUG, Cons. de Cultura, Educación e OU, Xunta de Galicia (GRC ED431C 2016/040).}
-}
-}
-
-\references{
-TODO
+S3 method to summarize a DTDAcif object by using the generic summary function.
 }
 \author{
 \itemize{

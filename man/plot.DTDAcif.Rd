@@ -4,37 +4,30 @@
 \alias{plot.DTDAcif}
 \title{plot.DTDAcif}
 \usage{
-\method{plot}{DTDAcif}(x, intervals = TRUE, level = 0.95, main = "",
-  xlab = "", ylab = "", ...)
+\method{plot}{DTDAcif}(x, intervals = FALSE, level = 0.95, main = "",
+  xlab = "", ylab = "", ylim, xlim, ...)
 }
 \arguments{
 \item{x}{DTDAcif object.}
 
-\item{intervals}{TODO}
+\item{intervals}{Logical. If TRUE confidence intervals are calculated if standard deviation was calculated before.}
 
-\item{level}{TODO}
+\item{level}{Confidence level of the standard deviation of the cifs. Default is 0.95.}
 
-\item{main}{TODO}
+\item{main}{An overall title for the plot.}
 
-\item{xlab}{TODO}
+\item{xlab}{A title for the x axis.}
 
-\item{ylab}{TODO}
+\item{ylab}{A title for the y axis.}
 
-\item{...}{TODO}
+\item{ylim}{Limit over the y axis.}
+
+\item{xlim}{Limit over the x axis.}
+
+\item{...}{Additional parameters.}
 }
 \description{
 S3 method to plot a DTDAcif object by using the generic plot function.
-}
-\section{Acknowledgements}{
-
-\itemize{
-\item{Jacobo de Uña-Álvarez was supported by Grant MTM2014-55966-P, Spanish Ministry of Economy and Competitiveness.}
-\item{José Carlos Soage was supported by Red Tecnológica de Matemática Industrial (Red TMATI), Cons. de Cultura, Educación e OU, Xunta de Galicia (ED341D R2016/051) and by Grupos de Referencia Competitiva, Consolidación y Estructuración de Unidades de Investigación Competitivas del SUG, Cons. de Cultura, Educación e OU, Xunta de Galicia (GRC ED431C 2016/040).}
-}
-}
-
-\references{
-TODO
 }
 \author{
 \itemize{
